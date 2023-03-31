@@ -9,12 +9,13 @@ import requests
 import os
 import time
 from bs4 import BeautifulSoup
+import utils
 
 #This code can scrape base.gov for contract information and download the Peças de Procedimento if they are stored in a zip file
 #This code is WIP
 
 #Search query url
-url = "https://www.base.gov.pt/Base4/pt/pesquisa/?type=contratos&texto=&tipo=2&tipocontrato=5&cpv=&aqinfo=&adjudicante=&adjudicataria=&sel_price=price_c1&desdeprecocontrato=&ateprecocontrato=&desdeprecoefectivo=&ateprecoefectivo=&sel_date=date_c4&desdedatacontrato=&atedatacontrato=&desdedatapublicacao=&atedatapublicacao=&desdeprazoexecucao=&ateprazoexecucao=&desdedatafecho=2023-02-01&atedatafecho=2023-02-28&pais=187&distrito=0&concelho=0"
+url = "https://www.base.gov.pt/Base4/pt/pesquisa/?type=contratos&texto=&tipo=2&tipocontrato=5&cpv=&aqinfo=&adjudicante=&adjudicataria=&sel_price=price_c1&desdeprecocontrato=&ateprecocontrato=&desdeprecoefectivo=&ateprecoefectivo=&sel_date=date_c4&desdedatacontrato=&atedatacontrato=&desdedatapublicacao=&atedatapublicacao=&desdeprazoexecucao=&ateprazoexecucao=&desdedatafecho=2023-02-22&atedatafecho=2023-02-22&pais=187&distrito=0&concelho=0"
 current_page = 0
 #webdriver options
 options = webdriver.ChromeOptions()
@@ -100,24 +101,37 @@ while True:
             #helpfullprints
             print("LINK VALUE")
             print(link_value)  # will output the link value
-            try:
-                # download file to 'Filedump' folder
-                filename = os.path.basename(link_value)
-                filename = os.path.basename(link_value).replace('/', '_').replace(':', '_').replace(" ","_")
-                response = requests.get(link_value, timeout=30) #set a timeout to 30 seconds if it takes to long to download the files in response
-                with open(f'Filedump/{filename}.zip', "wb") as f:
-                    f.write(response.content)
-            except requests.exceptions.Timeout:
-                print("Request timed out. Failed to download the file")
-    
-            except:
-                print("ESTE CONTRACTO NÃO TEM PEÇAS DO PROCEDIMENTO EM ZIP")
+            if "vortal.biz" in link_value:
+                utils.download_vortal(link_value=link_value, driver=driver, link_element=link_element, wait=wait)
+                driver.switch_to.window(driver.window_handles[-1])
+                driver.close()
+                print("AAAAAAAAAAAAAAAAAAAA")
+                print(len(driver.window_handles))
+            else:
+                try:
+                    # download file to 'Filedump' folder
+                    filename = os.path.basename(link_value)
+                    filename = os.path.basename(link_value).replace('/', '_').replace(':', '_').replace(" ","_")
+                    response = requests.get(link_value, timeout=30) #set a timeout to 30 seconds if it takes to long to download the files in response
+                    with open(f'Filedump/{filename}.zip', "wb") as f:
+                        f.write(response.content)
+                except requests.exceptions.Timeout:
+                    print("Request timed out. Failed to download the file")
+                except:
+                    print("ESTE CONTRACTO NÃO TEM PEÇAS DO PROCEDIMENTO EM ZIP. Pode ser vortal ou anagov")
+            
+
         except NoSuchElementException:
             print("Link element not found")
         
             
         # close the current window and switch back to the original window
+        print("AAAAAAAAAAAAAAAAAAAA")
+        print(len(driver.window_handles))
+        driver.switch_to.window(driver.window_handles[-1])
         driver.close()
+        print("AAAAAAAAAAAAAAAAAAAA")
+        print(len(driver.window_handles))
         driver.switch_to.window(driver.window_handles[0])
 
     # increment the page number and continue to the next page
@@ -133,15 +147,3 @@ while True:
 
 driver.quit()   
   
-    
-    
-    
-    
-    
-    
-    #can use this to update PPPData in the future
-    # find table body
-    #ver_detalhe_tbody = ver_detalhe_table.find_element(By.TAG_NAME, "tbody")
-    # and the rows
-    #ver_detalhe_rows = ver_detalhe_tbody.find_elements(By.TAG_NAME, "tr")
-    
