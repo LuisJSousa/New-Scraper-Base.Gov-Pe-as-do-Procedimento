@@ -15,7 +15,6 @@ from selenium.webdriver.common.action_chains import ActionChains
 
 
 #This code can scrape base.gov for contract information and download the Peças de Procedimento if they are stored in a zip file
-#This code is WIP
 
 #Search query url
 url = "https://www.base.gov.pt/Base4/pt/pesquisa/?type=contratos&texto=&tipo=2&tipocontrato=5&cpv=&aqinfo=&adjudicante=&adjudicataria=&sel_price=price_c1&desdeprecocontrato=&ateprecocontrato=&desdeprecoefectivo=&ateprecoefectivo=&sel_date=date_c2&desdedatacontrato=&atedatacontrato=&desdedatapublicacao=2023-02-01&atedatapublicacao=2023-02-15&desdeprazoexecucao=&ateprazoexecucao=&desdedatafecho=&atedatafecho=&pais=187&distrito=0&concelho=0"
