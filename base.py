@@ -10,12 +10,15 @@ import os
 import time
 from bs4 import BeautifulSoup
 import utils
+from selenium.webdriver.common.action_chains import ActionChains
+
+
 
 #This code can scrape base.gov for contract information and download the Peças de Procedimento if they are stored in a zip file
 #This code is WIP
 
 #Search query url
-url = "https://www.base.gov.pt/Base4/pt/pesquisa/?type=contratos&texto=&tipo=2&tipocontrato=5&cpv=&aqinfo=&adjudicante=&adjudicataria=&sel_price=price_c1&desdeprecocontrato=&ateprecocontrato=&desdeprecoefectivo=&ateprecoefectivo=&sel_date=date_c4&desdedatacontrato=&atedatacontrato=&desdedatapublicacao=&atedatapublicacao=&desdeprazoexecucao=&ateprazoexecucao=&desdedatafecho=2023-02-22&atedatafecho=2023-02-22&pais=187&distrito=0&concelho=0"
+url = "https://www.base.gov.pt/Base4/pt/pesquisa/?type=contratos&texto=&tipo=2&tipocontrato=5&cpv=&aqinfo=&adjudicante=&adjudicataria=&sel_price=price_c1&desdeprecocontrato=&ateprecocontrato=&desdeprecoefectivo=&ateprecoefectivo=&sel_date=date_c2&desdedatacontrato=&atedatacontrato=&desdedatapublicacao=2023-02-01&atedatapublicacao=2023-02-15&desdeprazoexecucao=&ateprazoexecucao=&desdedatafecho=&atedatafecho=&pais=187&distrito=0&concelho=0"
 current_page = 0
 #webdriver options
 options = webdriver.ChromeOptions()
@@ -26,7 +29,7 @@ options.add_argument('--disable-software-rasterizer')
 driver = webdriver.Chrome('chromedriver', options=options)
 
 # wait for the page title to contain the text "Base.gov.pt"
-wait = WebDriverWait(driver, 30)
+wait = WebDriverWait(driver, 35)
 
 #get webpage
 driver.get(url)
@@ -35,20 +38,17 @@ driver.get(url)
 while True:
     # Scrape the information from the current page
     # wait for the table to be present in the DOM
+    time.sleep(5)
     table = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@class="table table-striped"]')))
-
     # once the table is present, get its HTML content
     table_html = table.get_attribute('outerHTML')
-
     #find table 
-    print("Table: ")
+    ##print("Table: ")
     soup = BeautifulSoup(table_html, 'html.parser')
     objeto_contrato = soup.find('td', {'data-title': 'Objeto do contrato'}).text.strip()
-    print(objeto_contrato)
-
+    ##print(objeto_contrato)
     # find table body
     tbody = table.find_element(By.TAG_NAME, "tbody")
-
     # get all rows in table
     rows = tbody.find_elements(By.TAG_NAME, "tr")
     count = 0
@@ -65,47 +65,40 @@ while True:
                 break
             except StaleElementReferenceException:
                 continue
-
         #click the link to open a new window
         ver_detalhe.click()
-
         #wait for the new window to open
         wait.until(EC.number_of_windows_to_be(2))
         wait.until(EC.new_window_is_opened)
-
         #switch to the new window
         driver.switch_to.window(driver.window_handles[-1])
-        
         # wait for the table to be present in the DOM
+        time.sleep(3)
         ver_detalhe_table = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="no-more-tables-mx767"]/table[1]')))
-
         # wait for the element to be clickable
         #wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="no-more-tables-mx767"]/table[1]/tbody/tr[23]/td/a')))
-        
         # once the table is present, get its HTML content
         ver_detalhe_table_html = ver_detalhe_table.get_attribute('outerHTML')
         #helpfull prints
         #print("Ver detalhe: ")
         #print(ver_detalhe_table_html)
-
         # check if 'Filedump' folder exists, if not, create it
         if not os.path.exists('Filedump'):
             os.makedirs('Filedump')
-
         try:
             # find the element containing the 'Ligação para peças do procedimento' value
             link_element = driver.find_element(By.XPATH, '//*[@id="no-more-tables-mx767"]/table[1]/tbody/tr[23]/td/a')
             #wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="no-more-tables-mx767"]/table[1]/tbody/tr[23]/td/a')))
             # get the value of the 'Ligação para peças do procedimento' variable
             link_value = link_element.get_attribute('href')
-            #helpfullprints
+            #helpfull prints
             print("LINK VALUE")
             print(link_value)  # will output the link value
             if "vortal.biz" in link_value:
                 utils.download_vortal(link_value=link_value, driver=driver, link_element=link_element, wait=wait)
                 driver.switch_to.window(driver.window_handles[-1])
                 driver.close()
-                print(len(driver.window_handles))
+                
             elif "anogov" in link_value:
                 link_anogov = link_value.split("/")[-1]
                 link_anogov = link_value.replace(link_anogov,"")
@@ -187,7 +180,7 @@ while True:
                     except:
                         break
                 driver.switch_to.window(driver.window_handles[-1])
-                driver.close()   
+                driver.close()    
             else:
                 try:
                     # download file to 'Filedump' folder
@@ -199,32 +192,34 @@ while True:
                 except requests.exceptions.Timeout:
                     print("Request timed out. Failed to download the file")
                 except:
-                    print("ESTE CONTRACTO NÃO TEM PEÇAS DO PROCEDIMENTO EM ZIP. Pode ser vortal ou anagov")
+                    print("ESTE CONTRACTO NÃO TEM PEÇAS DO PROCEDIMENTO EM ZIP. Pode ser anagov")
             
 
         except NoSuchElementException:
             print("Link element not found")
-        
-            
+                
         # close the current window and switch back to the original window
         
-        print(len(driver.window_handles))
         driver.switch_to.window(driver.window_handles[-1])
         driver.close()
         
-        print(len(driver.window_handles))
         driver.switch_to.window(driver.window_handles[0])
 
     # increment the page number and continue to the next page
     current_page += 1
-    # Check if the "Next" button exists
-    next_button = driver.find_element(By.XPATH, f'//*[@id="page_{current_page}"]')
-    if not next_button.is_displayed():
+    try:
+        # Check if the "Next" button exists
+        next_button = driver.find_element(By.XPATH, f'//*[@id="page_{current_page}"]')
+        # Click the "Next" button
+        next_button.click()
+        time.sleep(20)  # wait for the page to load
+    
+    except:
+        print("Last Page scraped")
+        print("Scraping completed")
+        print("Total number of scraped contracts: ", count)
         break
 
-    # Click the "Next" button
-    next_button.click()
-    time.sleep(20)  # wait for the page to load
+driver.quit()
 
-driver.quit()   
   
